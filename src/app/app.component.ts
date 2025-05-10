@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 import { Tarefa } from "./tarefa";
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { catchError, retry } from 'rxjs/operators';
+import { catchError, retry, tap } from 'rxjs/operators';
 import { throwError } from 'rxjs';
 
 @Component({
@@ -32,15 +32,16 @@ export class AppComponent {
     this.http.post<Tarefa>(`${this.apiURL}/api/post`, novaTarefa)
       .pipe(
         retry(3),
-        catchError(this.handleError.bind(this))
+        catchError(this.handleError.bind(this)),
+        tap((resultado) => {
+          this.arrayDeTarefas = [resultado, ...this.arrayDeTarefas];
+          console.log('Tarefa criada:', resultado);
+        })
       )
       .subscribe({
-        next: (resultado) => {
-          console.log('Tarefa criada:', resultado);
-          this.READ_tarefas();
-        },
         error: (error) => {
           console.error('Erro ao criar tarefa:', error);
+          this.READ_tarefas();
         }
       });
   }
@@ -68,15 +69,16 @@ export class AppComponent {
     this.http.delete<Tarefa>(`${this.apiURL}/api/delete/${id}`)
       .pipe(
         retry(3),
-        catchError(this.handleError.bind(this))
+        catchError(this.handleError.bind(this)),
+        tap(() => {
+          this.arrayDeTarefas = this.arrayDeTarefas.filter(t => t._id !== id);
+          console.log('Tarefa removida do array local');
+        })
       )
       .subscribe({
-        next: (resultado) => {
-          console.log('Tarefa removida:', resultado);
-          this.READ_tarefas();
-        },
         error: (error) => {
           console.error('Erro ao remover tarefa:', error);
+          this.READ_tarefas();
         }
       });
   }
@@ -87,15 +89,18 @@ export class AppComponent {
     this.http.patch<Tarefa>(`${this.apiURL}/api/update/${id}`, tarefaAserModificada)
       .pipe(
         retry(3),
-        catchError(this.handleError.bind(this))
+        catchError(this.handleError.bind(this)),
+        tap((resultado) => {
+          this.arrayDeTarefas = this.arrayDeTarefas.map(t => 
+            t._id === id ? resultado : t
+          );
+          console.log('Tarefa atualizada no array local:', resultado);
+        })
       )
       .subscribe({
-        next: (resultado) => {
-          console.log('Tarefa atualizada:', resultado);
-          this.READ_tarefas();
-        },
         error: (error) => {
           console.error('Erro ao atualizar tarefa:', error);
+          this.READ_tarefas();
         }
       });
   }
